@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Engineering Toolkit 11 — Performance Analysis of Simulators and Systems</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&family=Geist+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1c1815;
+            --bg-card: #231e1a;
+            --bg-code: #2b2520;
+            --text-primary: #efe8dc;
+            --text-secondary: #a2978b;
+            --accent: #aabd59;
+            --accent-dim: #aabd5944;
+            --accent-glow: #aabd5933;
+            --border: #3a322b;
+            --font-display: 'Bricolage Grotesque', sans-serif;
+            --font-mono: 'Geist Mono', 'Geist Mono', monospace;
+            --font-body: 'Instrument Sans', sans-serif;
+            --max-width: 900px;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 17px;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ── Header ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .series-label {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 .accent {
+            color: var(--accent);
+        }
+
+        .hero .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+
+        /* ── Tag Pills ── */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .tag {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+            white-space: nowrap;
+        }
+
+        /* ── Pipeline Flow Bar ── */
+        .pipeline {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            margin-bottom: 1rem;
+            max-width: var(--max-width);
+        }
+
+        .pipeline-step {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 0.3rem 0.7rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .pipeline-arrow {
+            color: var(--accent);
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        /* ── Slides ── */
+        .slide {
+            min-height: 100vh;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .slide-number {
+            font-family: var(--font-display);
+            font-size: 5rem;
+            font-weight: 700;
+            color: var(--accent-dim);
+            position: absolute;
+            top: 2rem;
+            right: 1.5rem;
+            line-height: 1;
+            user-select: none;
+        }
+
+        .slide h2 {
+            font-family: var(--font-display);
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            line-height: 1.25;
+        }
+
+        .slide h3 {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .slide p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .slide p strong {
+            color: var(--text-primary);
+        }
+
+        .slide ul, .slide ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .slide li {
+            margin-bottom: 0.4rem;
+        }
+
+        .slide li strong {
+            color: var(--text-primary);
+        }
+
+        /* ── Code Blocks ── */
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            background: rgba(170,189,89,0.08);
+            padding: 0.4rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-block pre {
+            margin: 0;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #dad1c5;
+        }
+
+        /* Syntax highlighting (manual) */
+        .kw { color: #de805a; }
+        .fn { color: #d7bbdf; }
+        .str { color: #bcdbd4; }
+        .cm { color: #a2978b; font-style: italic; }
+        .num { color: #97cdc6; }
+        .type { color: #e3b174; }
+        .dir { color: #de805a; }
+        .mac { color: #e3b174; }
+
+        /* ── Tables ── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 1.25rem 0;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: var(--bg-code);
+            color: var(--accent);
+            font-weight: 600;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-display);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:nth-child(even) td {
+            background: rgba(35,30,26,0.5);
+        }
+
+        /* ── Diagrams ── */
+        .diagram-flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .diagram-box {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .diagram-box.accent {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(170,189,89,0.08);
+        }
+
+        .diagram-box.dim {
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+
+        .diagram-arrow {
+            color: var(--accent);
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        /* Vertical flow diagrams */
+        .diagram-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .diagram-vertical .diagram-arrow {
+            font-size: 1.1rem;
+        }
+
+        /* Nested hierarchy diagram */
+        .hierarchy {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .hierarchy-level {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .hierarchy-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .hierarchy-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+
+        .hierarchy-item {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .hierarchy-item.accent {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(170,189,89,0.08);
+        }
+
+        /* Grid diagram */
+        .diagram-grid {
+            display: grid;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .diagram-grid.cols-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .diagram-grid.cols-3 {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .diagram-panel {
+            padding: 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .diagram-panel.accent-border {
+            border-left: 3px solid var(--accent);
+        }
+
+        .diagram-panel h4 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .diagram-panel p, .diagram-panel ul {
+            font-size: 0.85rem;
+        }
+
+        /* ── Callout Boxes ── */
+        .callout {
+            background: var(--bg-card);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 1rem 1.25rem;
+            margin: 1.25rem 0;
+        }
+
+        .callout p {
+            margin-bottom: 0;
+        }
+
+        .callout .callout-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.3rem;
+        }
+
+        /* ── Tier Visual ── */
+        .tier-visual {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .tier-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .tier-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 90px;
+            text-align: right;
+        }
+
+        .tier-fill {
+            height: 32px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            white-space: nowrap;
+            transition: width 0.6s ease;
+        }
+
+        .tier-cost {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            min-width: 70px;
+        }
+
+        /* ── Contents list ── */
+        .contents-list {
+            list-style: none;
+            padding-left: 0;
+            counter-reset: contents;
+        }
+
+        .contents-list li {
+            counter-increment: contents;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .contents-list li:last-child {
+            border-bottom: none;
+        }
+
+        .contents-list li::before {
+            content: counter(contents, decimal-leading-zero);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            min-width: 2rem;
+        }
+
+        .contents-list a {
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .contents-list a:hover {
+            color: var(--accent);
+        }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            max-width: var(--max-width);
+            margin: 0 auto;
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 640px) {
+            .slide {
+                padding: 3rem 1rem;
+                min-height: auto;
+            }
+
+            .slide-number {
+                font-size: 3rem;
+                top: 1.5rem;
+                right: 1rem;
+            }
+
+            .slide h2 {
+                font-size: 1.5rem;
+            }
+
+            .diagram-grid.cols-2,
+            .diagram-grid.cols-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .pipeline {
+                gap: 0.15rem;
+            }
+
+            .pipeline-step {
+                font-size: 0.6rem;
+                padding: 0.2rem 0.4rem;
+            }
+
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            table {
+                font-size: 0.78rem;
+            }
+
+            .tier-label {
+                min-width: 60px;
+                font-size: 0.65rem;
+            }
+
+            .tier-fill {
+                font-size: 0.6rem;
+                height: 26px;
+            }
+        }
+
+        /* ── Interactive controls (added for Local LLM series) ── */
+        .control-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin: 1.25rem 0;
+        }
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .control-row label {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            min-width: 180px;
+        }
+        .control-row input[type="range"] {
+            flex: 1;
+            min-width: 160px;
+            accent-color: var(--accent);
+        }
+        .control-row input[type="number"],
+        .control-row select {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 4px;
+            padding: 0.3rem 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+        .control-row .val {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            min-width: 80px;
+            text-align: right;
+        }
+        .btn {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 0.4rem 0.9rem;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .btn:hover { background: rgba(170,189,89,0.2); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn.secondary {
+            background: var(--bg-code);
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+        .result-box {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            margin-top: 0.75rem;
+        }
+        .result-box .line-label { color: var(--text-secondary); }
+        .result-box .line-val   { color: var(--accent); font-weight: 600; }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .metric {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.6rem 0.8rem;
+            text-align: center;
+        }
+        .metric .metric-label {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .metric .metric-value {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+
+        /* Canvas / SVG containers */
+        .canvas-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.25rem 0;
+            overflow-x: auto;
+        }
+        .canvas-wrap canvas,
+        .canvas-wrap svg {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+        }
+
+        /* Small inline badge */
+        .badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            padding: 0.1rem 0.45rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: middle;
+            margin-left: 0.3rem;
+        }
+        .badge.ok    { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .badge.warn  { border-color: #e3b174; color: #e3b174; background: rgba(227,177,116,0.08); }
+        .badge.bad   { border-color: #de805a; color: #de805a; background: rgba(222,128,90,0.08); }
+
+
+        /* ── LLM Inference Simulators additions ── */
+        .canvas-wrap canvas { image-rendering: auto; display: block; width: 100%; height: auto; }
+        .canvas-wrap svg { max-width: 100%; height: auto; }
+        .ladder { display: grid; gap: 0.4rem; margin: 1.25rem 0; }
+        .ladder-row {
+            display: grid; grid-template-columns: 11rem 1fr 7.5rem; gap: 0.75rem; align-items: center;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+            padding: 0.55rem 0.85rem; font-size: 0.88rem;
+        }
+        .ladder-row .rung { font-family: var(--font-display); font-weight: 600; color: var(--accent); }
+        .ladder-row .speed { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); text-align: right; }
+        .res-list { list-style: none; padding: 0; margin: 0.75rem 0; }
+        .res-list li { padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
+        .res-list li:last-child { border-bottom: none; }
+        .res-list .what { color: var(--text-secondary); display: block; font-size: 0.86rem; margin-top: 0.15rem; }
+        .res-list a { color: var(--accent); text-decoration: none; }
+        .res-list a:hover { text-decoration: underline; }
+        .qa { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; margin: 0.6rem 0; padding: 0.2rem 1rem; }
+        .qa summary { cursor: pointer; padding: 0.6rem 0; font-weight: 600; }
+        .qa p, .qa ul { margin-bottom: 0.75rem; font-size: 0.92rem; }
+        .sim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.4rem 1.25rem; }
+        .chart-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+        .chart-title { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.3rem; }
+        .slide a { color: var(--accent); }
+        @media (max-width: 640px) {
+            .ladder-row { grid-template-columns: 1fr; gap: 0.2rem; }
+            .ladder-row .speed { text-align: left; }
+        }
+        .concepts { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 0.75rem 1rem; margin-top: 1.25rem; font-size: 0.88rem; }
+        .concepts p { margin: 0 0 0.4rem; color: var(--text-secondary); }
+        .concepts .chips { display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; }
+        .concepts .chips a { border: 1px solid var(--border); border-radius: 999px; padding: 0.1rem 0.6rem; text-decoration: none; font-size: 0.82rem; }
+        .concepts .chips a:hover { border-color: var(--accent); }
+        /* ── Simulation Engineering Toolkit additions ── */
+        .code-header a.src-link { color: var(--text-secondary); text-decoration: none; float: right; }
+        .code-header a.src-link:hover { color: var(--accent); text-decoration: underline; }
+        p.src { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary); margin: -0.75rem 0 1rem; }
+        p.src a { color: var(--text-secondary); }
+        .control-panel select, .control-panel input[type=number] { background: var(--bg-code); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 0.2rem 0.4rem; font-family: var(--font-mono); font-size: 0.8rem; }
+        .mut-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.4rem 1rem; font-size: 0.85rem; }
+        .mut-grid label { display: flex; gap: 0.5rem; align-items: baseline; cursor: pointer; }
+        .mut-list { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; }
+        .mut-list .killed { color: var(--accent); }
+        .mut-list .survived { color: #de805a; }
+        .hero { overflow: hidden; }   /* the 600px glow must not widen the page on phones */
+        .chart-pair > *, .diagram-grid > *, .sim-grid > * { min-width: 0; }   /* let wide code scroll inside its column */
+        .slide p code, .slide li code, .slide td code { overflow-wrap: anywhere; }
+        .control-panel select { max-width: 100%; }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="series-label">Simulation Engineering Toolkit &mdash; Presentation 11</div>
+    <h1>Performance Analysis of <span class="accent">Simulators and Systems</span></h1>
+    <p class="subtitle">Measuring before optimising, on the simulators in this series: the USE method and the profile-first loop, Linux perf and what to do when it is locked down, sampling profilers and interactive flame graphs from py-spy, instruction counts with cachegrind (Rust against Python), a hot spot found in the metrics code and fixed with identical answers, benchmark distributions, and regression gates designed from measured noise.</p>
+
+    <div class="tags">
+        <span class="tag">USE method</span>
+        <span class="tag">py-spy</span>
+        <span class="tag">Flame graphs</span>
+        <span class="tag">cachegrind</span>
+        <span class="tag">Benchmark statistics</span>
+        <span class="tag">Regression gates</span>
+    </div>
+
+    <div class="pipeline">
+        <span class="pipeline-step">Measure</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Profile</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Hypothesise</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Change</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Re-measure</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Gate</span>
+    </div>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>Topics We'll Cover</h2>
+    <ul class="contents-list">
+        <li><a href="#slide-01">Measure Before You Optimise</a></li>
+        <li><a href="#slide-02">Two Methods: USE for Resources, Profile First for Code</a></li>
+        <li><a href="#slide-03">USE in Practice: a Parallel Sweep</a></li>
+        <li><a href="#slide-04">Linux perf, and When You Cannot Use It</a></li>
+        <li><a href="#slide-05">Sampling Profilers and Flame Graphs</a></li>
+        <li><a href="#slide-06">Interactive: Flame Graphs of Two Simulators</a></li>
+        <li><a href="#slide-07">Reading a Profile: Self and Total Time</a></li>
+        <li><a href="#slide-08">Counting Instructions With Cachegrind</a></li>
+        <li><a href="#slide-09">Closing the Loop: Sort Once</a></li>
+        <li><a href="#slide-10">Benchmarks Are Distributions</a></li>
+        <li><a href="#slide-11">Interactive: Designing a Regression Gate</a></li>
+        <li><a href="#slide-12">Regression Detection in CI</a></li>
+        <li><a href="#slide-13">What to Take Away</a></li>
+    </ul>
+    <div class="concepts">
+        <p><strong>Concepts used here, and where they are explained.</strong> Each links to a glossary entry: this <a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#glossary">series glossary</a>, or the glossaries of LLM Inference Simulators and FHE Accelerator Simulators for concepts those series already explain.</p>
+        <div class="chips"><a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-profiling" title="Measure before optimising (cProfile, py-spy, perf). Time usually goes to model code that runs per entity per step, not to the event kernel.">Profiling a simulator</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-usemethod" title="For every resource (CPUs, memory, disks, network, locks), check utilisation, saturation (work queued because the resource is busy) and errors: a checklist that finds system bottlenecks without guessing.">The USE method</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-profileloop" title="Measure a baseline, profile, form one hypothesis, change one thing, re-measure, and check the answers did not change; repeat.">The profile-first loop</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-perf" title="The Linux profiler: hardware event counts (perf stat), sampled call stacks (perf record) and annotated code. Unprivileged access is governed by the kernel.perf_event_paranoid setting.">Linux perf and perf_event_paranoid</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-sampling" title="A profiler that records the call stack at a fixed rate; time spent shows up as samples. py-spy samples a Python process from outside, with no changes to it.">Sampling profilers (py-spy)</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-flamegraph" title="Sampled stacks merged by common prefix: a frame&#x27;s width is its share of samples, the top edge of each tower is where time is spent, and the x-axis is not time.">Flame graphs</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-selftotal" title="Self time counts samples where a function is running; total time counts samples where it is anywhere on the stack. Total locates the phase, self locates the code.">Self time and total time</a><a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-hotspot" title="Finding where speeding things up would help most. A stage breakdown that sums exactly to each request&#x27;s latency, the largest waiting stage mapped to the resource that owns it, confirmed by what-if sensitivity runs.">Hot-spot attribution</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-cachegrind" title="Valgrind&#x27;s tool that runs a program on a simulated CPU, counting every instruction and modelling the caches: slow, but deterministic, so small differences can be compared without timing noise.">Cachegrind and instruction counts</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-amdahl" title="Speeding up part of a program speeds up the whole only in proportion to that part&#x27;s share of the time. After porting a simulator&#x27;s engine, the Python code around it can dominate.">Amdahl's law for a port</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-benchdist" title="Repeated timings form a distribution, often with several clusters: report the median, the median absolute deviation and a bootstrap confidence interval rather than a mean and standard deviation.">Benchmark distributions</a><a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-warmup" title="A stochastic run is one experiment: drop the warm-up period, repeat with different seeds, and report mean ± a t-based confidence interval. Tail percentiles need many samples.">Warm-up, replications and confidence intervals</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-gatedesign" title="Running a timing gate on unchanged code measures its false-alarm rate; the number of runs per side and the margin then set what it catches. The margin must sit well below the regression to be caught.">A/A tests and regression-gate design</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-perfgate" title="A CI step that benchmarks the build and fails it if a benchmark is slower than a stored baseline by more than a set margin.">Performance-regression gate</a><a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-parallelruns" title="Independent runs parallelise trivially (processes, job arrays), but each technique only speeds up the share of time it touches; serial overheads cap the gain.">Parallel runs and Amdahl's law</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-rayon" title="rayon turns iter() into par_iter() on a work-stealing thread pool. The Send and Sync traits let the compiler prove that what each thread touches is safe to share, so a data race is a compile error.">rayon, Send and Sync</a></div>
+    </div>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>Measure Before You Optimise</h2>
+    <p>A simulator that takes a minute gets run a hundred times a day; one that takes an hour gets run once, and its users start guessing instead. So simulator speed matters, and the first rule of making it faster is the one <a href="https://brendanjameslynskey.github.io/InfSim_08_Accelerating_Simulators/#slide-02">LLM Inference Simulators 08</a> calls step zero: profile first. Intuition about where time goes is wrong often enough that it is not worth acting on.</p>
+    <p>This deck applies the standard tools to the simulators in this series, on one desktop machine (an Intel i7-3770 with 8 logical CPUs, with a desktop session running), and reports what they found, including two things that were not expected:</p>
+    <ul>
+        <li>The Rust port of Disaggregated_Inference_Sim spends 45% of its instructions <em>sorting</em>, in its metrics code, not in its simulation engine.</li>
+        <li>On this machine, a single-run timing gate with a 5% margin raises a false alarm on unchanged code 23% of the time.</li>
+    </ul>
+    <p>Every number comes from <code>snippets/t11/run_t11.py</code> and <code>profile_first.py</code>, recorded in <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/blob/main/snippets/RESULTS.md">RESULTS.md</a>.</p>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>Two Methods: USE for Resources, Profile First for Code</h2>
+    <div class="canvas-wrap">
+        <svg viewBox="0 0 720 170" width="720" height="170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The profile-first loop: measure, profile, form a hypothesis, change one thing, re-measure and check the answers are unchanged, then repeat">
+            <style>
+                .u1 { fill: #2b2520; stroke: #aabd59; stroke-width: 1.5; }
+                .ut { fill: #efe8dc; font-family: 'Geist Mono', monospace; font-size: 11px; }
+                .ud { fill: #a2978b; font-family: 'Geist Mono', monospace; font-size: 10px; }
+                .ua { stroke: #a2978b; stroke-width: 1.3; fill: none; marker-end: url(#ua1); }
+            </style>
+            <defs><marker id="ua1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#a2978b"/></marker></defs>
+            <rect x="10" y="40" width="120" height="50" rx="6" class="u1"/><text x="22" y="62" class="ut">measure</text><text x="22" y="78" class="ud">a baseline, N runs</text>
+            <rect x="155" y="40" width="120" height="50" rx="6" class="u1"/><text x="167" y="62" class="ut">profile</text><text x="167" y="78" class="ud">where does it go?</text>
+            <rect x="300" y="40" width="120" height="50" rx="6" class="u1"/><text x="312" y="62" class="ut">hypothesis</text><text x="312" y="78" class="ud">one cause</text>
+            <rect x="445" y="40" width="120" height="50" rx="6" class="u1"/><text x="457" y="62" class="ut">change</text><text x="457" y="78" class="ud">one thing</text>
+            <rect x="590" y="40" width="120" height="50" rx="6" class="u1"/><text x="602" y="62" class="ut">re-measure</text><text x="602" y="78" class="ud">same answers?</text>
+            <path d="M132,65 L151,65 M277,65 L296,65 M422,65 L441,65 M567,65 L586,65" class="ua"/>
+            <path d="M650,92 C650,140 70,140 70,94" class="ua"/><text x="270" y="152" class="ud">repeat until the profile is flat or the goal is met</text>
+        </svg>
+    </div>
+    <ul>
+        <li><strong>The <a href="https://www.brendangregg.com/usemethod.html">USE method</a></strong> (Brendan Gregg) checks every resource (CPUs, memory, disks, network, locks) for <strong>U</strong>tilisation, <strong>S</strong>aturation (work queued because the resource is busy) and <strong>E</strong>rrors. It finds system bottlenecks quickly, because it is a checklist rather than a guess.</li>
+        <li><strong>The profile-first loop</strong> finds code bottlenecks. Its last step is the one that is skipped most often: check that the answers did not change. For a simulator, a faster wrong answer is a regression.</li>
+        <li>Profile the workload users actually run. A micro-benchmark of the event queue says nothing about a run dominated by metrics.</li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>USE in Practice: a Parallel Sweep</h2>
+    <p>Rust_DES_Kernel's <code>disagg-rs --sweep</code> runs one simulation per arrival rate in parallel with rayon. Here are eight rates of 4,000 requests each, under <code>/usr/bin/time -v</code>, on one thread and on eight:</p>
+    <div class="table-wrap"><table>
+<thead><tr><th>Threads</th><th>Wall time</th><th>CPU</th><th>Utilisation of 8 CPUs</th><th>Max RSS</th><th>Voluntary switches</th><th>Involuntary switches</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>0.56 s</td><td>99%</td><td>12.4%</td><td>36.3 MB</td><td>3</td><td>20</td></tr>
+<tr><td>8</td><td>0.20 s</td><td>636%</td><td>79.5%</td><td>269.5 MB</td><td>90</td><td>214</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/blob/main/snippets/RESULTS.md">snippets/RESULTS.md</a> in _simeng_build</p>
+    <ul>
+        <li><strong>Utilisation:</strong> eight threads kept 79.5% of the 8 logical CPUs busy and ran 2.8&times; faster, not 8&times;. The i7-3770 has 4 cores with 2 hardware threads each, so 8 threads share 4 sets of execution units. The desktop was also running.</li>
+        <li><strong>Saturation:</strong> involuntary context switches rose from 20 to 214. Threads were pre-empted because there were more runnable threads than free CPUs.</li>
+        <li><strong>Memory:</strong> peak resident memory grew 7.4&times;, because each simulation holds its own state. On a 15 GB machine, memory is the resource to watch for wide sweeps.</li>
+        <li><strong>Errors:</strong> none here. In CI, out-of-memory kills and timeouts are the errors to look for.</li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>Linux perf, and When You Cannot Use It</h2>
+    <p><code>perf</code> is the Linux profiler. <code>perf stat</code> counts hardware events (cycles, instructions, cache and branch misses, from which instructions per cycle follows); <code>perf record</code> samples call stacks for a profile; <code>perf report</code> and <code>perf annotate</code> show where the samples landed, down to the instruction. The <a href="https://perfwiki.github.io/main/">perf wiki</a> covers it in depth.</p>
+    <div class="table-wrap"><table>
+        <thead><tr><th>Command (not run here)</th><th>Answers</th></tr></thead>
+        <tbody>
+            <tr><td><code>perf stat -e cycles,instructions,cache-misses,branch-misses -- ./sim</code></td><td>Is it compute-, memory- or branch-bound? (instructions per cycle, misses per thousand instructions)</td></tr>
+            <tr><td><code>perf record -g -- ./sim</code> then <code>perf report</code></td><td>Which functions, on which call paths, take the samples?</td></tr>
+            <tr><td><code>perf record -g</code> then <code>perf script</code> into a flame-graph tool</td><td>The same profile, drawn as a flame graph</td></tr>
+        </tbody>
+    </table></div>
+    <div class="callout">
+        <div class="callout-label">What happened on this machine</div>
+        <code>kernel.perf_event_paranoid</code> is 4; <code>perf stat -e cycles,instructions -- true</code> exits with status 1: "Consider adjusting /proc/sys/kernel/perf_event_paranoid setting to open"
+        <p>A setting of 4 (Ubuntu's default) denies performance events to unprivileged users, so none of the commands above could run. An administrator can lower it (see the <a href="https://www.kernel.org/doc/html/latest/admin-guide/perf-security.html">kernel's perf security guide</a>), which was not done here. The rest of this deck uses tools that need no privileges: <strong>py-spy</strong>, which reads a Python process's memory to sample its stacks, and <strong>cachegrind</strong>, which runs the program on a simulated CPU and counts every instruction.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>Sampling Profilers and Flame Graphs</h2>
+    <p>A sampling profiler interrupts the program at a fixed rate (here 500 times a second) and records the call stack. Functions that take more time appear in more samples. The overhead is small and the program does not need changing. The price is statistical noise for anything that takes only a few samples.</p>
+    <div class="canvas-wrap">
+        <svg viewBox="0 0 720 150" width="720" height="150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Four sampled stacks are merged into a flame graph: main at the bottom spans all samples; run takes three of four, summarise one; step and percentile sit above them">
+            <style>
+                .fg1 { fill: #aabd59; } .fg2 { fill: #e3b174; } .fg3 { fill: #97cdc6; }
+                .ft { fill: #1f1a16; font-family: 'Geist Mono', monospace; font-size: 10px; }
+                .fd { fill: #a2978b; font-family: 'Geist Mono', monospace; font-size: 10px; }
+            </style>
+            <text x="10" y="14" class="fd">samples (stacks, leaf last)</text>
+            <text x="10" y="34" class="fd">main;run;step</text><text x="10" y="50" class="fd">main;run;step</text><text x="10" y="66" class="fd">main;run;decode</text><text x="10" y="82" class="fd">main;summarise;percentile</text>
+            <text x="230" y="60" class="fd">merge -&gt;</text>
+            <rect x="300" y="110" width="400" height="20" class="fg1"/><text x="306" y="124" class="ft">main (4 of 4)</text>
+            <rect x="300" y="88" width="299" height="20" class="fg1"/><text x="306" y="102" class="ft">run (3)</text>
+            <rect x="601" y="88" width="99" height="20" class="fg2"/><text x="607" y="102" class="ft">summarise (1)</text>
+            <rect x="300" y="66" width="199" height="20" class="fg3"/><text x="306" y="80" class="ft">step (2)</text>
+            <rect x="501" y="66" width="98" height="20" class="fg3"/><text x="507" y="80" class="ft">decode (1)</text>
+            <rect x="601" y="66" width="99" height="20" class="fg3"/><text x="607" y="80" class="ft">percentile</text>
+            <text x="300" y="146" class="fd">width = share of samples; left-to-right order is alphabetical, not time</text>
+        </svg>
+    </div>
+    <p>A <a href="https://www.brendangregg.com/flamegraphs.html">flame graph</a> merges identical stack prefixes. The width of a frame is the share of samples in which it was on the stack (its <em>total</em> time). The top edge of each tower is where the time is actually spent (<em>self</em> time). The x-axis is not time, so a wide frame is a hot spot, not a long phase.</p>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>Interactive: Flame Graphs of Two Simulators</h2>
+    <p>Real py-spy profiles: Disaggregated_Inference_Sim simulating 3,000 requests (975 samples), and Memory_System_Sim simulating 20,000 random requests on one HBM pseudo-channel (6,042 samples). Green frames are the simulator's code, amber are SimPy's, blue are the standard library and purple the rest (the interpreter's start-up and imports). Frames under 0.4% of the samples are omitted.</p>
+    <div class="control-panel">
+        <div class="sim-grid">
+            <div class="control-row"><label for="fg-p">Profile</label><select id="fg-p"><option value="disagg">Disaggregated_Inference_Sim (SimPy)</option><option value="memsim">Memory_System_Sim</option></select></div>
+            <div class="control-row"><button class="btn" id="fg-reset" type="button">Reset zoom</button></div>
+        </div>
+        <div class="canvas-wrap"><svg id="fg-svg" viewBox="0 0 720 300" width="720" height="300" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div class="result-box" id="fg-r">Click a frame to zoom into it; hover for its share of the samples.</div>
+    </div>
+    <script>
+    (function () {
+        const FG_DISAGG = {"n":"all","v":975,"c":[{"n":"_run_module_as_main (runpy)","v":949,"c":[{"n":"_run_code (runpy)","v":948,"c":[{"n":"<module> (disagg_sim/__main__.py)","v":947,"c":[{"n":"main (disagg_sim/cli.py)","v":931,"c":[{"n":"run_once (disagg_sim/cli.py)","v":930,"c":[{"n":"simulate (disagg_sim/sim.py)","v":742,"c":[{"n":"run (disagg_sim/sim.py)","v":742,"c":[{"n":"run (simpy/core.py)","v":742,"c":[{"n":"step (simpy/core.py)","v":724,"c":[{"n":"_resume (simpy/events.py)","v":684,"c":[{"n":"run (disagg_sim/sim.py)","v":571,"c":[{"n":"decode_once (disagg_sim/sim.py)","v":510,"c":[{"n":"decode (disagg_sim/hardware.py)","v":189,"c":[{"n":"decode_sum (disagg_sim/hardware.py)","v":170,"c":[{"n":"_time (disagg_sim/hardware.py)","v":128,"c":[{"n":"step_time (disagg_sim/hardware.py)","v":68,"c":[]},{"n":"__init__ (<string>)","v":34,"c":[]}]}]}]},{"n":"decode_step_done (disagg_sim/sim.py)","v":150,"c":[]},{"n":"step (disagg_sim/sim.py)","v":91,"c":[{"n":"__init__ (simpy/events.py)","v":27,"c":[{"n":"schedule (simpy/core.py)","v":15,"c":[]}]},{"n":"account_power (disagg_sim/sim.py)","v":6,"c":[]}]}]},{"n":"prefill (disagg_sim/hardware.py)","v":16,"c":[{"n":"_time (disagg_sim/hardware.py)","v":9,"c":[{"n":"step_time (disagg_sim/hardware.py)","v":7,"c":[]}]}]},{"n":"admit_decode (disagg_sim/sim.py)","v":9,"c":[]}]},{"n":"kv_transfer (disagg_sim/sim.py)","v":47,"c":[{"n":"__exit__ (simpy/resources/resource.py)","v":16,"c":[{"n":"__init__ (simpy/resources/resource.py)","v":12,"c":[{"n":"__init__ (simpy/resources/base.py)","v":12,"c":[{"n":"_trigger_get (simpy/resources/base.py)","v":8,"c":[{"n":"_do_get (simpy/resources/resource.py)","v":6,"c":[{"n":"succeed (simpy/events.py)","v":6,"c":[{"n":"schedule (simpy/core.py)","v":5,"c":[]}]}]}]}]}]}]},{"n":"__init__ (simpy/resources/base.py)","v":6,"c":[{"n":"_trigger_put (simpy/resources/base.py)","v":5,"c":[]}]}]},{"n":"sampler (disagg_sim/sim.py)","v":35,"c":[{"n":"__init__ (simpy/events.py)","v":7,"c":[]}]},{"n":"arrivals (disagg_sim/sim.py)","v":10,"c":[]}]}]}]}]}]},{"n":"summarise (disagg_sim/metrics.py)","v":173,"c":[{"n":"_dist (disagg_sim/metrics.py)","v":153,"c":[{"n":"percentile (disagg_sim/metrics.py)","v":125,"c":[]},{"n":"fmean (statistics.py)","v":9,"c":[]}]},{"n":"fmean (statistics.py)","v":11,"c":[{"n":"count (statistics.py)","v":11,"c":[{"n":"<genexpr> (disagg_sim/metrics.py)","v":8,"c":[{"n":"stages (disagg_sim/workload.py)","v":7,"c":[]}]}]}]}]},{"n":"poisson_workload (disagg_sim/workload.py)","v":12,"c":[{"n":"sample (disagg_sim/workload.py)","v":8,"c":[]}]}]}]},{"n":"_find_and_load (importlib._bootstrap)","v":16,"c":[{"n":"_find_and_load_unlocked (importlib._bootstrap)","v":15,"c":[{"n":"_load_unlocked (importlib._bootstrap)","v":14,"c":[{"n":"exec_module (importlib._bootstrap_external)","v":14,"c":[{"n":"get_code (importlib._bootstrap_external)","v":9,"c":[{"n":"_compile_bytecode (importlib._bootstrap_external)","v":5,"c":[]}]},{"n":"_call_with_frames_removed (importlib._bootstrap)","v":5,"c":[{"n":"<module> (disagg_sim/cli.py)","v":5,"c":[{"n":"_find_and_load (importlib._bootstrap)","v":4,"c":[{"n":"_find_and_load_unlocked (importlib._bootstrap)","v":4,"c":[]}]}]}]}]}]}]}]}]}]}]},{"n":"","v":25,"c":[]}]};  // from _simeng_build/snippets/t11/flame_disagg_sim.json
+        const FG_MEMSIM = {"n":"all","v":6042,"c":[{"n":"<module> (<string>)","v":6036,"c":[{"n":"simulate (memsim/controller.py)","v":5985,"c":[{"n":"run (memsim/controller.py)","v":5882,"c":[{"n":"t_act (memsim/controller.py)","v":1150,"c":[]},{"n":"_hits_queued (memsim/controller.py)","v":643,"c":[]},{"n":"_bank (memsim/controller.py)","v":464,"c":[]},{"n":"t_col (memsim/controller.py)","v":460,"c":[]},{"n":"_col (memsim/controller.py)","v":322,"c":[{"n":"_dequeue (memsim/controller.py)","v":255,"c":[{"n":"__eq__ (<string>)","v":194,"c":[]}]}]},{"n":"consider (memsim/controller.py)","v":309,"c":[]},{"n":"_act (memsim/controller.py)","v":48,"c":[]},{"n":"_enqueue (memsim/controller.py)","v":28,"c":[]}]},{"n":"decode (memsim/mapping.py)","v":75,"c":[]}]}]}]};  // from _simeng_build/snippets/t11/flame_memsim.json
+        const $ = id => document.getElementById(id);
+        const H = 17, W = 720, PAL = ['#aabd59', '#e3b174', '#97cdc6', '#de805a', '#c9a8d8'];
+        let root, focus, path;
+        const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const colour = n => /simpy/.test(n) ? PAL[1] : /(disagg_sim|memsim)/.test(n) ? PAL[0] : /(heapq|random|<built-in|statistics|math)/.test(n) ? PAL[2] : PAL[4];
+        function load() { root = $('fg-p').value === 'disagg' ? FG_DISAGG : FG_MEMSIM; focus = root; path = [root]; draw(); }
+        function draw() {
+            const total = root.v, rows = [];
+            // ancestors of the focus are drawn full width, greyed
+            path.slice(0, -1).forEach((a, d) => rows.push([a, d, 0, W, true]));
+            const base = path.length - 1;
+            (function walk(n, d, x, w) {
+                rows.push([n, d, x, w, false]);
+                let cx = x;
+                n.c.forEach(k => { const kw = w * k.v / n.v; if (kw >= 1) walk(k, d + 1, cx, kw); cx += kw; });
+            })(focus, base, 0, W);
+            const depth = Math.max(...rows.map(r => r[1])) + 1;
+            $('fg-svg').setAttribute('viewBox', `0 0 ${W} ${depth * H + 4}`);
+            $('fg-svg').setAttribute('height', depth * H + 4);
+            $('fg-svg').innerHTML = rows.map(([n, d, x, w, anc], i) => {
+                const y = d * H, label = esc(n.n.replace(/ \(.*\)$/, '')), pct = (100 * n.v / total).toFixed(1);
+                const text = w > 40 ? `<text x="${x + 3}" y="${y + 12}" fill="#1f1a16" font-family="Geist Mono, monospace" font-size="10" pointer-events="none">${label.slice(0, Math.floor(w / 6.2))}</text>` : '';
+                return `<g data-i="${i}" style="cursor:pointer"><rect x="${x + 0.5}" y="${y}" width="${Math.max(w - 1, 0.5)}" height="${H - 1}" fill="${anc ? '#6b6158' : colour(n.n)}" rx="2"><title>${esc(n.n)}: ${pct}% of samples</title></rect>${text}</g>`;
+            }).join('');
+            $('fg-svg').querySelectorAll('g').forEach(g => g.addEventListener('click', () => {
+                const [n, , , , anc] = rows[+g.dataset.i];
+                if (anc) path = path.slice(0, path.indexOf(n) + 1);
+                else if (n !== focus) { const chain = []; (function find(m, trail) { if (m === n) { chain.push(...trail, m); return true; } return m.c.some(k => find(k, [...trail, m])); })(focus, []); path = path.slice(0, -1).concat(chain); }
+                focus = path[path.length - 1];
+                $('fg-r').innerHTML = `<span class="line-label">${esc(focus.n)}</span>: ${(100 * focus.v / root.v).toFixed(1)}% of all samples (${focus.v.toLocaleString('en-GB')} of ${root.v.toLocaleString('en-GB')}). Width is time; order left to right means nothing.`;
+                draw();
+            }));
+        }
+        $('fg-p').addEventListener('input', load);
+        $('fg-reset').addEventListener('click', () => { focus = root; path = [root]; draw(); });
+        window.flameFocus = name => { (function find(m, trail) { if (m.n.startsWith(name)) { path = [...trail, m]; return true; } return m.c.some(k => find(k, [...trail, m])); })(root, []); focus = path[path.length - 1]; draw(); return (100 * focus.v / root.v).toFixed(1); };
+        load();
+    })();
+    </script>
+</section>
+
+<section class="slide" id="slide-07">
+    <div class="slide-number">07</div>
+    <h2>Reading a Profile: Self and Total Time</h2>
+    <div class="table-wrap"><table>
+<thead><tr><th>Function (file)</th><th>Self time</th><th></th><th>Function (file)</th><th>Total time</th></tr></thead>
+<tbody>
+<tr><td><code>decode_step_done (disagg_sim/sim.py)</code></td><td>15.0%</td><td></td><td><code>main (disagg_sim/cli.py)</code></td><td>95.5%</td></tr>
+<tr><td><code>percentile (disagg_sim/metrics.py)</code></td><td>12.8%</td><td></td><td><code>run_once (disagg_sim/cli.py)</code></td><td>95.4%</td></tr>
+<tr><td><code>decode_once (disagg_sim/sim.py)</code></td><td>8.2%</td><td></td><td><code>run (simpy/core.py)</code></td><td>76.1%</td></tr>
+<tr><td><code>step_time (disagg_sim/hardware.py)</code></td><td>7.7%</td><td></td><td><code>run (disagg_sim/sim.py)</code></td><td>76.1%</td></tr>
+<tr><td><code>step (disagg_sim/sim.py)</code></td><td>5.8%</td><td></td><td><code>simulate (disagg_sim/sim.py)</code></td><td>76.1%</td></tr>
+<tr><td><code>decode_sum (disagg_sim/hardware.py)</code></td><td>4.3%</td><td></td><td><code>step (simpy/core.py)</code></td><td>74.3%</td></tr>
+<tr><td><code>step (simpy/core.py)</code></td><td>4.0%</td><td></td><td><code>_resume (simpy/events.py)</code></td><td>70.2%</td></tr>
+<tr><td><code>__init__ (&lt;string&gt;)</code></td><td>3.6%</td><td></td><td><code>decode_once (disagg_sim/sim.py)</code></td><td>52.3%</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/blob/main/snippets/RESULTS.md">snippets/RESULTS.md</a> in _simeng_build</p>
+    <ul>
+        <li><strong>Total time locates the phase:</strong> 76% of the run is inside SimPy's event loop (<code>simulate</code>), with half of all samples in <code>decode_once</code>. The cost model's <code>step_time</code> and <code>decode_sum</code> are 12% of self time between them: the roofline arithmetic is not free.</li>
+        <li><strong>Self time locates the code:</strong> <code>percentile</code> is the second-largest self-time function at 12.8%. It is in the metrics, after the simulation has finished, and nobody optimising the event loop would look there.</li>
+    </ul>
+    <div class="table-wrap"><table>
+<thead><tr><th>Function (file)</th><th>Self time</th><th></th><th>Function (file)</th><th>Total time</th></tr></thead>
+<tbody>
+<tr><td><code>run (memsim/controller.py)</code></td><td>40.3%</td><td></td><td><code>simulate (memsim/controller.py)</code></td><td>99.1%</td></tr>
+<tr><td><code>t_act (memsim/controller.py)</code></td><td>19.0%</td><td></td><td><code>run (memsim/controller.py)</code></td><td>97.4%</td></tr>
+<tr><td><code>_hits_queued (memsim/controller.py)</code></td><td>10.6%</td><td></td><td><code>t_act (memsim/controller.py)</code></td><td>19.0%</td></tr>
+<tr><td><code>_bank (memsim/controller.py)</code></td><td>7.7%</td><td></td><td><code>_hits_queued (memsim/controller.py)</code></td><td>10.6%</td></tr>
+<tr><td><code>t_col (memsim/controller.py)</code></td><td>7.6%</td><td></td><td><code>_bank (memsim/controller.py)</code></td><td>7.7%</td></tr>
+<tr><td><code>consider (memsim/controller.py)</code></td><td>5.1%</td><td></td><td><code>t_col (memsim/controller.py)</code></td><td>7.6%</td></tr>
+<tr><td><code>__eq__ (&lt;string&gt;)</code></td><td>3.2%</td><td></td><td><code>_col (memsim/controller.py)</code></td><td>5.3%</td></tr>
+<tr><td><code>_dequeue (memsim/controller.py)</code></td><td>1.0%</td><td></td><td><code>consider (memsim/controller.py)</code></td><td>5.1%</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/blob/main/snippets/RESULTS.md">snippets/RESULTS.md</a> in _simeng_build</p>
+    <p>Memory_System_Sim is a different shape: 40% of its time is in the controller's main loop itself, and 19% in <code>t_act</code>, which computes the earliest legal activate time against every timing constraint. That is the model's intrinsic work, and a candidate for the Rust core its README proposes (<a href="https://brendanjameslynskey.github.io/SimEng_02_Rust_Python_PyO3/">deck 02</a>).</p>
+</section>
+
+<section class="slide" id="slide-08">
+    <div class="slide-number">08</div>
+    <h2>Counting Instructions With Cachegrind</h2>
+    <p><a href="https://valgrind.org/docs/manual/cg-manual.html">Cachegrind</a> runs a program on a simulated CPU and counts every instruction, with a simple model of the caches. It is 20&ndash;100&times; slower than native, but deterministic: the same run gives the same count, so small changes can be compared without timing noise. Here are the same 500-request simulation in Rust and in Python:</p>
+    <div class="table-wrap"><table>
+<thead><tr><th>Implementation</th><th>Instructions</th><th>Instructions per request</th><th>I1 miss rate</th><th>D1 miss rate</th><th>LL miss rate</th></tr></thead>
+<tbody>
+<tr><td>Rust (disagg-rs)</td><td>59,162,943</td><td>118,325</td><td>0.01%</td><td>3.2%</td><td>0.1%</td></tr>
+<tr><td>Python (disagg-sim, SimPy)</td><td>1,394,927,076</td><td>2,789,854</td><td>0.78%</td><td>3.4%</td><td>0.0%</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/blob/main/snippets/RESULTS.md">snippets/RESULTS.md</a> in _simeng_build</p>
+    <ul>
+        <li>Start-up, measured separately: Python with the simulator's imports 286,627,513 instructions; a one-request Rust run 847,816. Net of start-up: Python 2,216,599 and Rust 116,630 instructions per request, 19x (gross: 24x).</li>
+        <li>Neither run is cache-bound: the working set fits, and both miss the last-level cache on 0.1% or fewer of references. The difference is purely instructions, interpreter work against compiled code.</li>
+    </ul>
+    <p>The Rust run's top functions by instructions executed:</p>
+    <div class="table-wrap"><table>
+<thead><tr><th>Function</th><th>Share of instructions</th></tr></thead>
+<tbody>
+<tr><td><code>sort::stable::quicksort::quicksort::&lt;f64, &lt;[f64]&gt;::sort_by&lt;&lt;f64&gt;::total_cmp&gt;::{closure#0}&gt;</code></td><td>45.4%</td></tr>
+<tr><td><code>rust_des_kernel::pymath::fmean</code></td><td>17.1%</td></tr>
+<tr><td><code>&lt;rust_des_kernel::disagg::engine::Simulation&gt;::run</code></td><td>11.7%</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/blob/main/snippets/RESULTS.md">snippets/RESULTS.md</a> in _simeng_build</p>
+    <p>The simulation engine (<code>Simulation::run</code>) is 11.7%. Sorting floats is 45.4%, and <code>fmean</code> another 17.1%: <code>summarise</code>, computing the latency percentiles. That agrees with Rust_DES_Kernel's own measurement, where <code>summarise</code> took 11.3 ms against 4.3 ms for <code>simulate</code> (<a href="https://brendanjameslynskey.github.io/SimEng_02_Rust_Python_PyO3/">deck 02</a>).</p>
+</section>
+
+<section class="slide" id="slide-09">
+    <div class="slide-number">09</div>
+    <h2>Closing the Loop: Sort Once</h2>
+    <p><strong>Hypothesis:</strong> <code>_dist</code> calls <code>percentile</code> for p50, p90 and p99, and each call sorts the whole list again. For inter-token latencies that list has 763,474 values. <strong>Change:</strong> sort once and take all three percentiles from the sorted list. <strong>Check:</strong> <code>summarise</code> must return exactly the same answers.</p>
+    <div class="code-block">
+        <div class="code-header">snippets/t11/profile_first.py <a class="src-link" href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/blob/main/snippets/t11/profile_first.py">source</a></div>
+        <pre><code><span class="kw">def</span> <span class="fn">_dist_sort_once</span>(xs: list[float]) -&gt; dict:
+    s = <span class="fn">sorted</span>(xs)
+    <span class="kw">return</span> {<span class="str">"mean"</span>: metrics.<span class="fn">fmean</span>(xs) <span class="kw">if</span> xs <span class="kw">else</span> math.nan, <span class="str">"p50"</span>: <span class="fn">_percentile_sorted</span>(s, <span class="num">50</span>),
+            <span class="str">"p90"</span>: <span class="fn">_percentile_sorted</span>(s, <span class="num">90</span>), <span class="str">"p99"</span>: <span class="fn">_percentile_sorted</span>(s, <span class="num">99</span>),
+            <span class="str">"max"</span>: s[-<span class="num">1</span>] <span class="kw">if</span> s <span class="kw">else</span> math.nan}</code></pre>
+    </div>
+    <div class="table-wrap"><table>
+<thead><tr><th><code>summarise</code></th><th>Median of 9 (alternating)</th><th>Runs (ms)</th></tr></thead>
+<tbody>
+<tr><td>original: one sort per percentile</td><td>308.7 ms</td><td>309, 301, 309, 303, 322, 311, 319, 305, 308</td></tr>
+<tr><td>sort once</td><td>140.9 ms</td><td>146, 135, 141, 141, 143, 135, 142, 134, 138</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/blob/main/snippets/RESULTS.md">snippets/RESULTS.md</a> in _simeng_build</p>
+    <ul>
+        <li>Speed-up of <code>summarise</code>: 2.19x; outputs identical: True. End to end (simulate + summarise): 1.20 s to 1.03 s (1.16x).</li>
+        <li><strong>Amdahl's law:</strong> <code>summarise</code> got 2.2&times; faster, the whole run 1.16&times;, because the simulation itself was untouched (<a href="https://brendanjameslynskey.github.io/InfSim_08_Accelerating_Simulators/#slide-14">InfSim 08, slide 14</a>).</li>
+        <li><strong>Where it would matter more:</strong> in the Rust port, sorting is 45% of the instructions, so the same one-line change would be worth more there than in Python. The change is demonstrated here in a separate script rather than applied to the two simulators; doing so is a recorded follow-up (each repository's speed numbers would then need regenerating).</li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-10">
+    <div class="slide-number">10</div>
+    <h2>Benchmarks Are Distributions</h2>
+    <p>The same command, run 40 times on an unchanged machine, takes 40 different times:</p>
+    <div class="table-wrap"><table>
+<thead><tr><th>Benchmark</th><th>Runs</th><th>Median</th><th>Mean</th><th>Min</th><th>Max</th><th>CV</th><th>MAD</th><th>95% CI of the median (bootstrap)</th></tr></thead>
+<tbody>
+<tr><td><code>disagg-rs</code>, whole process (wall clock)</td><td>40</td><td>60.3 ms</td><td>59.1 ms</td><td>52.4 ms</td><td>64.1 ms</td><td>5.6%</td><td>1.3 ms</td><td>59.3 ms to 60.9 ms</td></tr>
+<tr><td>memsim, in-process repeats 2 to 40</td><td>39</td><td>891.1 ms</td><td>893.5 ms</td><td>866.5 ms</td><td>966.5 ms</td><td>2.2%</td><td>7.4 ms</td><td>885.6 ms to 896.7 ms</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/blob/main/snippets/RESULTS.md">snippets/RESULTS.md</a> in _simeng_build</p>
+    <div class="canvas-wrap"><svg id="bd-svg" viewBox="0 0 720 120" width="720" height="120" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <script>
+    (function () {
+        const T11R = {"cpu":"Intel(R) Core(TM) i7-3770 CPU @ 3.40GHz","python":"3.12.12","loadavg_start":["2.83","2.88","2.15"],"perf":{"paranoid":"4","exit":1,"message":"Consider adjusting /proc/sys/kernel/perf_event_paranoid setting to open"},"pyspy_disagg_sim":{"cmd":"/home/brendan/Claude_sandbox/_simeng_build/.venv/bin/python -m disagg_sim --requests 3000 --rate 4 --seed 1","wall_s":2.05,"samples":975,"self":[["decode_step_done (disagg_sim/sim.py)",15.0],["percentile (disagg_sim/metrics.py)",12.8],["decode_once (disagg_sim/sim.py)",8.2],["step_time (disagg_sim/hardware.py)",7.7],["step (disagg_sim/sim.py)",5.8],["decode_sum (disagg_sim/hardware.py)",4.3],["step (simpy/core.py)",4.0],["__init__ (<string>)",3.6],["run (disagg_sim/sim.py)",3.2],["schedule (simpy/core.py)",3.1]],"total":[["main (disagg_sim/cli.py)",95.5],["run_once (disagg_sim/cli.py)",95.4],["run (simpy/core.py)",76.1],["run (disagg_sim/sim.py)",76.1],["simulate (disagg_sim/sim.py)",76.1],["step (simpy/core.py)",74.3],["_resume (simpy/events.py)",70.2],["decode_once (disagg_sim/sim.py)",52.3],["decode (disagg_sim/hardware.py)",19.4],["summarise (disagg_sim/metrics.py)",17.7]]},"pyspy_memsim":{"cmd":"/home/brendan/Claude_sandbox/_simeng_build/.venv/bin/python -c '...'","wall_s":12.13,"samples":6042,"self":[["run (memsim/controller.py)",40.3],["t_act (memsim/controller.py)",19.0],["_hits_queued (memsim/controller.py)",10.6],["_bank (memsim/controller.py)",7.7],["t_col (memsim/controller.py)",7.6],["consider (memsim/controller.py)",5.1],["__eq__ (<string>)",3.2],["_dequeue (memsim/controller.py)",1.0],["_col (memsim/controller.py)",0.9],["_act (memsim/controller.py)",0.7]],"total":[["simulate (memsim/controller.py)",99.1],["run (memsim/controller.py)",97.4],["t_act (memsim/controller.py)",19.0],["_hits_queued (memsim/controller.py)",10.6],["_bank (memsim/controller.py)",7.7],["t_col (memsim/controller.py)",7.6],["_col (memsim/controller.py)",5.3],["consider (memsim/controller.py)",5.1],["_dequeue (memsim/controller.py)",4.2],["__eq__ (<string>)",3.2]]},"cachegrind_rust":{"I_refs":"59,162,943","I1_miss":"0.01","D_refs":"16,668,362","D1_miss":"3.2","LL_miss":"0.1","branches":null,"top":[["sort::stable::quicksort::quicksort::<f64, <[f64]>::sort_by<<f64>::total_cmp>::{closure#0}>","45.4"],["rust_des_kernel::pymath::fmean","17.1"],["<rust_des_kernel::disagg::engine::Simulation>::run","11.7"]]},"cachegrind_python":{"I_refs":"1,394,927,076","I1_miss":"0.78","D_refs":"582,693,777","D1_miss":"3.4","LL_miss":"0.0","branches":null,"top":[]},"bench":{"rust_process":{"cmd":"disagg-rs --n 3000 --rate 4 --seed 1","samples":[0.06111622499884106,0.05980536500283051,0.06118591900303727,0.055218045999936294,0.05254324099951191,0.06033880299946759,0.06168510800489457,0.06137365400354611,0.0625734530040063,0.05902875999890966,0.06106978400202934,0.05925943100010045,0.05759338200005004,0.06024290799541632,0.05991615799575811,0.06221468099829508,0.05722257900197292,0.06068309099646285,0.06178788000397617,0.06246904299769085,0.05272732799494406,0.06127003699657507,0.0605077229993185,0.06288581500120927,0.053570226998999715,0.054270635002467316,0.052400309999939054,0.06317441999999573,0.05896241900336463,0.054541486999369226,0.059404815001471434,0.06110336100391578,0.0605083209957229,0.06049061099474784,0.0596037509967573,0.06054387699987274,0.0524831950024236,0.05926948400156107,0.06410844600031851,0.05561046399816405],"n":40,"median":0.06029085549744195,"mean":0.05911910592494678,"min":0.052400309999939054,"max":0.06410844600031851,"stdev":0.0032977340341865573,"cv_pct":5.578118922118199,"mad":0.0012952659963048063,"ci95_median":[0.05926445750083076,0.060876437499246094]},"memsim_inprocess":{"cmd":"simulate(hbm2e_pc, 6000 random requests)","samples":[0.880815687996801,0.8758644560002722,0.893441645996063,0.8978356049992726,0.8985355040058494,0.8969782689964632,0.8979343660030281,0.8946252790046856,0.8801353660019231,0.8775561549991835,0.8967916869951296,0.9322453339991625,0.9665022250046604,0.9315761069956352,0.9257243809988722,0.9010072239980218,0.887776807998307,0.9252897050027968,0.8881433959977585,0.8910728009941522,0.8973820050014183,0.885586983000394,0.8747063159971731,0.8664986379953916,0.8766630410027574,0.8842530449983315,0.8872140789972036,0.873889209004119,0.8914748270035489,0.8748489270001301,0.8703957780016935,0.8837160089969984,0.8949765649958863,0.8878068679987337,0.8926967989973491,0.8967079299982288,0.8903887519991258,0.8804360040012398,0.904467566004314,0.8726469550019829],"n":39,"median":0.8910728009941522,"mean":0.893481861794545,"min":0.8664986379953916,"max":0.9665022250046604,"stdev":0.019868253439961573,"cv_pct":2.2236885033185207,"mad":0.007356791997153778,"ci95_median":[0.885586983000394,0.8967079299982288],"first":0.880815687996801}},"gates":[{"k":1,"margin":0.02,"false_alarm":0.36235,"detects_5pct":0.6929,"detects_10pct":0.82655},{"k":1,"margin":0.05,"false_alarm":0.2282,"detects_5pct":0.4852,"detects_10pct":0.7616},{"k":1,"margin":0.1,"false_alarm":0.1374,"detects_5pct":0.23535,"detects_10pct":0.4852},{"k":3,"margin":0.02,"false_alarm":0.29205,"detects_5pct":0.77145,"detects_10pct":0.89825},{"k":3,"margin":0.05,"false_alarm":0.14615,"detects_5pct":0.4802,"detects_10pct":0.84375},{"k":3,"margin":0.1,"false_alarm":0.06625,"detects_5pct":0.1517,"detects_10pct":0.4802},{"k":5,"margin":0.02,"false_alarm":0.24525,"detects_5pct":0.82915,"detects_10pct":0.93685},{"k":5,"margin":0.05,"false_alarm":0.1002,"detects_5pct":0.4779,"detects_10pct":0.89305},{"k":5,"margin":0.1,"false_alarm":0.0362,"detects_5pct":0.10385,"detects_10pct":0.4779},{"k":10,"margin":0.02,"false_alarm":0.1637,"detects_5pct":0.9023,"detects_10pct":0.986},{"k":10,"margin":0.05,"false_alarm":0.0407,"detects_5pct":0.49795,"detects_10pct":0.95435},{"k":10,"margin":0.1,"false_alarm":0.00515,"detects_5pct":0.0455,"detects_10pct":0.49795}],"use":{"runs":[{"threads":1,"wall_s":0.56,"cpu_pct":99,"utilisation_pct":12.4,"max_rss_mb":36.3,"voluntary_cs":3,"involuntary_cs":20},{"threads":8,"wall_s":0.2,"cpu_pct":636,"utilisation_pct":79.5,"max_rss_mb":269.5,"voluntary_cs":90,"involuntary_cs":214}],"cores":8,"loadavg_before":["1.71","2.56","2.10"]}};  // from _simeng_build/snippets/t11/out/results.json
+        const xs = T11R.bench.rust_process.samples.map(v => 1000 * v), med = 1000 * T11R.bench.rust_process.median;
+        const lo = 50, hi = 66, X = v => 40 + 640 * (v - lo) / (hi - lo);
+        let s = `<line x1="40" y1="90" x2="680" y2="90" stroke="#a2978b"/>`;
+        for (let v = lo; v <= hi; v += 2) s += `<line x1="${X(v)}" y1="90" x2="${X(v)}" y2="94" stroke="#a2978b"/><text x="${X(v)}" y="106" text-anchor="middle" fill="#a2978b" font-family="Geist Mono, monospace" font-size="10">${v}</text>`;
+        const bins = {};
+        xs.forEach(v => { const b = Math.round(v * 2) / 2; bins[b] = (bins[b] || 0) + 1; s += `<circle cx="${X(v)}" cy="${84 - 8 * (bins[b] - 1)}" r="3.5" fill="#aabd59" opacity="0.85"/>`; });
+        s += `<line x1="${X(med)}" y1="10" x2="${X(med)}" y2="90" stroke="#e3b174" stroke-dasharray="4 3"/><text x="${X(med) + 5}" y="18" fill="#e3b174" font-family="Geist Mono, monospace" font-size="10">median ${med.toFixed(1)} ms</text>`;
+        s += `<text x="680" y="118" text-anchor="end" fill="#a2978b" font-family="Geist Mono, monospace" font-size="10">disagg-rs, whole process, ms (40 runs)</text>`;
+        document.getElementById('bd-svg').innerHTML = s;
+    })();
+    </script>
+    <ul>
+        <li><strong>The distribution has two clusters</strong>, around 53 ms and 61 ms, not one bell. Frequency scaling, which core and hardware thread the process lands on, and the desktop all move it. A mean and a standard deviation describe this badly; the median and the MAD (median absolute deviation) describe it well.</li>
+        <li><strong>Report an interval:</strong> a bootstrap confidence interval for the median (resample the runs with replacement, take the median, repeat 5,000 times) needs no assumption about the distribution's shape.</li>
+        <li><strong>Warm-up depends on the runtime.</strong> memsim's first in-process run was no slower than the rest (0.99&times;): CPython 3.12 has no JIT to warm up. JIT-compiled runtimes, and anything with cold caches or lazy loading, need warm-up runs that are discarded (as criterion does by default; <a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-warmup">warm-up and replications</a>).</li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-11">
+    <div class="slide-number">11</div>
+    <h2>Interactive: Designing a Regression Gate</h2>
+    <p>A speed gate compares the median of <em>k</em> runs of the new build with the median of <em>k</em> runs of the baseline, and fails if the new one is slower by more than a margin. Using the 40 measured runs above, each setting was tried 20,000 times on unchanged code (how often it raises a false alarm) and on code made 5% and 10% slower (how often it catches the regression):</p>
+    <div class="control-panel">
+        <div class="sim-grid">
+            <div class="control-row"><label for="gd-k">Runs per side (k)</label><select id="gd-k"></select></div>
+            <div class="control-row"><label for="gd-m">Margin</label><select id="gd-m"></select></div>
+        </div>
+        <div class="metric-grid" id="gd-mt"></div>
+        <div class="canvas-wrap"><svg id="gd-svg" viewBox="0 0 720 200" width="720" height="200" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div class="result-box" id="gd-r"></div>
+    </div>
+    <script>
+    (function () {
+        const GATES = [["k runs each", "Margin", "False alarm (A/A)", "Detects +5%", "Detects +10%"], ["1", "2%", "36.2%", "69.3%", "82.7%"], ["1", "5%", "22.8%", "48.5%", "76.2%"], ["1", "10%", "13.7%", "23.5%", "48.5%"], ["3", "2%", "29.2%", "77.1%", "89.8%"], ["3", "5%", "14.6%", "48.0%", "84.4%"], ["3", "10%", "6.6%", "15.2%", "48.0%"], ["5", "2%", "24.5%", "82.9%", "93.7%"], ["5", "5%", "10.0%", "47.8%", "89.3%"], ["5", "10%", "3.6%", "10.4%", "47.8%"], ["10", "2%", "16.4%", "90.2%", "98.6%"], ["10", "5%", "4.1%", "49.8%", "95.4%"], ["10", "10%", "0.5%", "4.5%", "49.8%"]];  // from _simeng_build/snippets/RESULTS.md
+        const $ = id => document.getElementById(id);
+        const rows = GATES.slice(1).map(r => ({ k: +r[0], m: r[1], fa: parseFloat(r[2]), d5: parseFloat(r[3]), d10: parseFloat(r[4]) }));
+        [...new Set(rows.map(r => r.k))].forEach(k => $('gd-k').add(new Option(k, k)));
+        [...new Set(rows.map(r => r.m))].forEach(m => $('gd-m').add(new Option(m, m)));
+        $('gd-k').value = '1'; $('gd-m').value = '5%';
+        function draw() {
+            const r = rows.find(x => x.k === +$('gd-k').value && x.m === $('gd-m').value);
+            const m = (l, v) => `<div class="metric"><div class="metric-label">${l}</div><div class="metric-value">${v}</div></div>`;
+            $('gd-mt').innerHTML = m('False alarms (unchanged code)', r.fa.toFixed(1) + '%') + m('Catches a 5% slow-down', r.d5.toFixed(1) + '%') + m('Catches a 10% slow-down', r.d10.toFixed(1) + '%') + m('Runs per check', 2 * r.k);
+            const ks = [...new Set(rows.map(x => x.k))], X = i => 90 + 420 * i / (ks.length - 1), Y = v => 175 - 1.55 * v;
+            let s = `<line x1="80" y1="175" x2="520" y2="175" stroke="#a2978b"/><line x1="80" y1="20" x2="80" y2="175" stroke="#a2978b"/>`;
+            [0, 50, 100].forEach(v => { s += `<text x="74" y="${Y(v) + 4}" text-anchor="end" fill="#a2978b" font-family="Geist Mono, monospace" font-size="10">${v}%</text>`; });
+            ks.forEach((k, i) => { s += `<text x="${X(i)}" y="191" text-anchor="middle" fill="#a2978b" font-family="Geist Mono, monospace" font-size="10">k = ${k}</text>`; });
+            [['fa', '#de805a', 'false alarm'], ['d5', '#e3b174', 'catches +5%'], ['d10', '#aabd59', 'catches +10%']].forEach(([f, c, l], j) => {
+                const pts = ks.map((k, i) => [X(i), Y(rows.find(x => x.k === k && x.m === $('gd-m').value)[f])]);
+                s += `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width="2"/>` + pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${c}"/>`).join('');
+                s += `<rect x="560" y="${44 + 16 * j}" width="10" height="10" fill="${c}"/><text x="574" y="${53 + 16 * j}" fill="#efe8dc" font-family="Geist Mono, monospace" font-size="10">${l}</text>`;
+            });
+            const i = ks.indexOf(r.k); s += `<line x1="${X(i)}" y1="20" x2="${X(i)}" y2="175" stroke="#efe8dc" stroke-dasharray="3 3"/>`;
+            $('gd-svg').innerHTML = `<rect x="550" y="36" width="150" height="58" fill="#1f1a16" stroke="#3a322b"/>` + s;
+            let msg = `With ${r.k} run${r.k > 1 ? 's' : ''} per side and a ${r.m} margin, an unchanged build fails ${r.fa.toFixed(1)}% of the time`;
+            msg += r.fa > 10 ? ': often enough that people learn to ignore the gate. ' : (r.fa > 2 ? '. ' : ': rare enough to trust. ');
+            msg += r.d10 < 60 ? `It catches only ${r.d10.toFixed(0)}% of 10% regressions: a margin close to the regression size gives a coin toss.` : `It catches ${r.d10.toFixed(0)}% of 10% regressions and ${r.d5.toFixed(0)}% of 5% ones.`;
+            $('gd-r').innerHTML = msg;
+        }
+        ['gd-k', 'gd-m'].forEach(id => $(id).addEventListener('input', draw));
+        draw();
+    })();
+    </script>
+</section>
+
+<section class="slide" id="slide-12">
+    <div class="slide-number">12</div>
+    <h2>Regression Detection in CI</h2>
+    <ul>
+        <li><strong>Calibrate with an A/A test.</strong> Run the gate on unchanged code until you know its false-alarm rate. Here a single run against a single run with a 5% margin fails unchanged code 23% of the time.</li>
+        <li><strong>Choose k and the margin together.</strong> The margin must sit well below the regression you want to catch: with a 10% margin, a 10% slow-down is caught only about half the time, whatever k is. Ten runs per side with a 5% margin gave 4% false alarms and caught 95% of 10% slow-downs.</li>
+        <li><strong>Separate exact checks from timed ones.</strong> Behaviour (outputs, cycle counts, FLOPs) is gated exactly; time is gated statistically (<a href="https://brendanjameslynskey.github.io/SimEng_07_Jenkins_for_Simulation_Teams/#slide-08">deck 07</a>). Instruction counts from cachegrind are a third option: deterministic and noise-free, though not the same thing as time.</li>
+        <li><strong>Control the machine when you can:</strong> a dedicated runner, a fixed CPU frequency, no other jobs. One heavy job at a time also keeps a small machine from running out of memory, as it did more than once during this series.</li>
+        <li><strong>Keep the raw samples</strong> as a build artefact, so a failure can be re-examined rather than re-run. criterion does this for Rust benchmarks and reports a confidence interval for each change (<a href="https://bheisler.github.io/criterion.rs/book/">criterion user guide</a>).</li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-13">
+    <div class="slide-number">13</div>
+    <h2>What to Take Away</h2>
+    <ul>
+        <li><strong>USE for resources, profile first for code</strong>, and always check the answers after a change.</li>
+        <li><strong>Read self and total time.</strong> Here the hot spot was in the metrics, not the engine: 45% of the Rust port's instructions were spent sorting.</li>
+        <li><strong>Without perf, py-spy and cachegrind still work</strong>, unprivileged; cachegrind's instruction counts are deterministic.</li>
+        <li><strong>Timings are distributions:</strong> report medians and intervals, and keep the raw samples.</li>
+        <li><strong>Design gates from measured noise:</strong> an A/A test sets the false-alarm rate, and k and the margin set what is caught.</li>
+    </ul>
+    <ul class="res-list">
+        <li><a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit/tree/main/snippets/t11">snippets/t11</a><span class="what">The measurement scripts, the raw profiles and flame graphs, and the sort-once experiment.</span></li>
+        <li><a href="https://github.com/benfred/py-spy">py-spy</a> and <a href="https://valgrind.org/docs/manual/cg-manual.html">cachegrind</a><span class="what">The two profilers used here.</span></li>
+        <li><a href="https://www.brendangregg.com/usemethod.html">The USE method</a> and <a href="https://www.brendangregg.com/flamegraphs.html">flame graphs</a><span class="what">Brendan Gregg's descriptions of both.</span></li>
+        <li><a href="https://brendanjameslynskey.github.io/InfSim_08_Accelerating_Simulators/">LLM Inference Simulators 08</a><span class="what">Techniques for making simulators faster, measured.</span></li>
+        <li><a href="https://github.com/BrendanJamesLynskey/Interview_Computer_Architecture">Interview_Computer_Architecture</a><span class="what">Caches, pipelines and performance counters.</span></li>
+    </ul>
+</section>
+
+<!-- ════════════════════════════════════ Footer ════════════════════════════════════ -->
+<footer class="footer">
+    <p>Part of the <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit">Simulation Engineering Toolkit series</a> &middot; <a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#glossary">glossary: every concept and where it is explained</a> &middot; code: <a href="https://github.com/BrendanJamesLynskey/Rust_DES_Kernel">Rust_DES_Kernel</a> &middot; <a href="https://github.com/BrendanJamesLynskey/Disaggregated_Inference_Sim">Disaggregated_Inference_Sim</a> &middot; <a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim">Memory_System_Sim</a></p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem;"><a href="https://brendanjameslynskey.github.io/SimEng_10_PyTorch_ONNX_Frontends/">&larr; 10 From PyTorch and ONNX to an Accelerator Model</a></p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem;">Interview questions: <a href="https://github.com/BrendanJamesLynskey/Interview_Computer_Architecture">Interview_Computer_Architecture</a> &middot; <a href="https://github.com/BrendanJamesLynskey/Interview_Observability_SRE">Interview_Observability_SRE</a> &middot; sister series: <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Inference_Simulators">LLM Inference Simulators</a> &middot; <a href="https://github.com/BrendanJamesLynskey/FHE_Hub_Accelerator_Simulators">FHE Accelerator Simulators</a></p>
+</footer>
+
+<script>
+    // Smooth scroll for TOC links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    // Subtle fade-in on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.slide').forEach(slide => {
+        slide.style.opacity = '0';
+        slide.style.transform = 'translateY(30px)';
+        slide.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(slide);
+    });
+</script>
+
+</body>
+</html>
